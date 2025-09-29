@@ -104,43 +104,51 @@ def fine_tune():
     train_text = train_df.bio_text.str.cat(sep="\n\n")
     dev_text = dev_df.bio_text.str.cat(sep="\n\n")
     test_text = test_df.bio_text.str.cat(sep="\n\n")
-    with (data_dir_path / "xtrain.txt").open("w", encoding="utf-8") as writer:
-        writer.write(train_text)
-    with (data_dir_path / "xdev.txt").open("w", encoding="utf-8") as writer:
-        writer.write(dev_text)
-    with (data_dir_path / "xtest.txt").open("w", encoding="utf-8") as writer:
-        writer.write(test_text)
 
-    # Clean up data files
-    for split in ["train.txt", "dev.txt", "test.txt"]:
-        file_path = data_dir_path / split
-        backup_path = data_dir_path / f"x{split}"
+    if not Path(data_dir_path / "xtrain.txt").exists():
+        with (data_dir_path / "xtrain.txt").open("w", encoding="utf-8") as writer:
+            writer.write(train_text)
+    if not Path(data_dir_path / "xdev.txt").exists():
+        with (data_dir_path / "xdev.txt").open("w", encoding="utf-8") as writer:
+            writer.write(dev_text)
+    if not Path(data_dir_path / "xtest.txt").exists():
+        with (data_dir_path / "xtest.txt").open("w", encoding="utf-8") as writer:
+            writer.write(test_text)
+    
+    if (not Path(data_dir_path / "train.txt").exists() or 
+        not Path(data_dir_path / "dev.txt").exists() or 
+        not Path(data_dir_path / "test.txt").exists()):
+        
+        # clean up data files
+        for split in ["train.txt", "dev.txt", "test.txt"]:
+            file_path = data_dir_path / split
+            backup_path = data_dir_path / f"x{split}"
 
-        with open(backup_path, encoding="utf-8") as fin, open(file_path, "w", encoding="utf-8") as fout:
-            for line in fin:
-                line = line.strip()
-                if not line:
-                    fout.write("\n")
-                    continue
+            with open(backup_path, encoding="utf-8") as fin, open(file_path, "w", encoding="utf-8") as fout:
+                for line in fin:
+                    line = line.strip()
+                    if not line:
+                        fout.write("\n")
+                        continue
 
-                parts = line.split()
-                if len(parts) < 2:
-                    continue
+                    parts = line.split()
+                    if len(parts) < 2:
+                        continue
 
-                token, tag = parts[0], parts[-1]
+                    token, tag = parts[0], parts[-1]
 
-                if tag == "O":
-                    fout.write(f"{token} {tag}\n")
-                    continue
-
-                if "-" in tag:
-                    _, entity = tag.split("-", 1)
-                    if entity in label_order:
+                    if tag == "O":
                         fout.write(f"{token} {tag}\n")
+                        continue
+
+                    if "-" in tag:
+                        _, entity = tag.split("-", 1)
+                        if entity in label_order:
+                            fout.write(f"{token} {tag}\n")
+                        else:
+                            fout.write(f"{token} O\n")
                     else:
                         fout.write(f"{token} O\n")
-                else:
-                    fout.write(f"{token} O\n")
 
     corpus: Corpus = ColumnCorpus(data_dir_path, 
                                   {0: 'text', 1: 'ner'}, 
