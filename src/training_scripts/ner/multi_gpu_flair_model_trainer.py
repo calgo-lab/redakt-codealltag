@@ -572,14 +572,14 @@ class MultiGpuFlairModelTrainer(ModelTrainer):
 
                     if save_best_model and current_epoch_has_best_model_so_far:
                         log.info("saving best model")
-                        self._save_model(base_path / "best-model.pt", save_optimizer_state=save_optimizer_state)
+                        self._save_model(base_path / "best-model.pt")
 
                 # - SWAPlugin -> restores SGD weights from SWA
                 self.dispatch("after_training_loop")
 
                 # if we do not use dev data for model selection, save final model
                 if save_final_model:
-                    self._save_model(base_path / "final-model.pt", save_optimizer_state=save_optimizer_state)
+                    self._save_model(base_path / "final-model.pt")
 
             except KeyboardInterrupt:
                 log_line(log)
@@ -589,7 +589,7 @@ class MultiGpuFlairModelTrainer(ModelTrainer):
 
                 if save_final_model:
                     log.info("Saving model ...")
-                    self._save_model(base_path / "final-model.pt", save_optimizer_state=save_optimizer_state)
+                    self._save_model(base_path / "final-model.pt")
                 log.info("Done.")
 
             except TrainingInterrupt as exc:
@@ -600,7 +600,7 @@ class MultiGpuFlairModelTrainer(ModelTrainer):
 
                 if save_final_model:
                     log.info("Saving model ...")
-                    self._save_model(base_path / "final-model.pt", save_optimizer_state=save_optimizer_state)
+                    self._save_model(base_path / "final-model.pt")
                 log.info("Done.")
 
             except Exception:
