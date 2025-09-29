@@ -101,9 +101,9 @@ def fine_tune():
     data_dir_path.mkdir(parents=True, exist_ok=True)
 
     
-    train_text = train_df.bioes_text.str.cat(sep="\n\n")
-    dev_text = dev_df.bioes_text.str.cat(sep="\n\n")
-    test_text = test_df.bioes_text.str.cat(sep="\n\n")
+    train_text = train_df.bio_text.str.cat(sep="\n\n")
+    dev_text = dev_df.bio_text.str.cat(sep="\n\n")
+    test_text = test_df.bio_text.str.cat(sep="\n\n")
     with (data_dir_path / "train.txt").open("w", encoding="utf-8") as writer:
         writer.write(train_text)
     with (data_dir_path / "dev.txt").open("w", encoding="utf-8") as writer:
