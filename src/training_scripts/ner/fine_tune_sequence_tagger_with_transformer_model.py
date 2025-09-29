@@ -44,7 +44,7 @@ def fine_tune():
     transformer_model_name = os.environ.get("TRANSFORMER_MODEL_NAME", "google-bert/bert-base-german-cased")
     
     use_context = os.environ.get("USE_CONTEXT", None)
-    use_context = int(use_context) if use_context else 0
+    use_context = int(use_context) if use_context else 1
     if use_context == 0 or use_context == 1:
         use_context = bool(use_context)
 
@@ -55,7 +55,7 @@ def fine_tune():
     max_epochs = int(max_epochs) if max_epochs else 35
     
     mini_batch_size = os.environ.get("MINI_BATCH_SIZE", None)
-    mini_batch_size = int(mini_batch_size) if mini_batch_size else 1
+    mini_batch_size = int(mini_batch_size) if mini_batch_size else 4
     
     project_root: Path = ProjectUtils.get_project_root()
     data_handler = CodealltagDataHandler(project_root, data_dir=data_dir)
@@ -104,14 +104,50 @@ def fine_tune():
     train_text = train_df.bio_text.str.cat(sep="\n\n")
     dev_text = dev_df.bio_text.str.cat(sep="\n\n")
     test_text = test_df.bio_text.str.cat(sep="\n\n")
-    with (data_dir_path / "train.txt").open("w", encoding="utf-8") as writer:
+    with (data_dir_path / "xtrain.txt").open("w", encoding="utf-8") as writer:
         writer.write(train_text)
-    with (data_dir_path / "dev.txt").open("w", encoding="utf-8") as writer:
+    with (data_dir_path / "xdev.txt").open("w", encoding="utf-8") as writer:
         writer.write(dev_text)
-    with (data_dir_path / "test.txt").open("w", encoding="utf-8") as writer:
+    with (data_dir_path / "xtest.txt").open("w", encoding="utf-8") as writer:
         writer.write(test_text)
 
-    corpus: Corpus = ColumnCorpus(data_dir_path, {0: 'text', 1: 'ner'})
+    # Clean up data files
+    for split in ["train.txt", "dev.txt", "test.txt"]:
+        file_path = data_dir_path / split
+        backup_path = data_dir_path / f"x{split}"
+
+        with open(backup_path, encoding="utf-8") as fin, open(file_path, "w", encoding="utf-8") as fout:
+            for line in fin:
+                line = line.strip()
+                if not line:
+                    fout.write("\n")
+                    continue
+
+                parts = line.split()
+                if len(parts) < 2:
+                    continue
+
+                token, tag = parts[0], parts[-1]
+
+                if tag == "O":
+                    fout.write(f"{token} {tag}\n")
+                    continue
+
+                if "-" in tag:
+                    _, entity = tag.split("-", 1)
+                    if entity in label_order:
+                        fout.write(f"{token} {tag}\n")
+                    else:
+                        fout.write(f"{token} O\n")
+                else:
+                    fout.write(f"{token} O\n")
+
+    corpus: Corpus = ColumnCorpus(data_dir_path, 
+                                  {0: 'text', 1: 'ner'}, 
+                                  train_file="train.txt", 
+                                  dev_file="dev.txt", 
+                                  test_file="test.txt")
+    
     label_dict: Dictionary = corpus.make_label_dictionary(label_type="ner")
 
     model_dir_path = data_dir_path / f"learning-rate-{learning_rate:.0e}".replace('e-0', 'e-')

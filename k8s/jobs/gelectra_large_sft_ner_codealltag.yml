@@ -55,7 +55,7 @@ spec:
             - name: MAX_EPOCHS
               value: "35"
             - name: MINI_BATCH_SIZE
-              value: "1"
+              value: "32"
             - name: WANDB_API_KEY
               valueFrom:
                 secretKeyRef:
