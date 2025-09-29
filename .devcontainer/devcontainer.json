@@ -1,0 +1,28 @@
+{
+  "name": "redakt-codealltag",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "dev",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter"
+      ],
+      "settings": {
+        "terminal.integrated.profiles.linux": {
+          "$USERNAME": {
+            "path": "bash",
+            "args": ["-lc", "exec gosu $USERNAME bash"]
+          }
+        },
+        "terminal.integrated.defaultProfile.linux": "$USERNAME"
+      }
+    }
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace/${localWorkspaceFolderBasename},type=bind,consistency=cached"
+  ],
+  "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
+  "forwardPorts": [8787],
+  "postStartCommand": "bash .devcontainer/setup_user.sh"
+}

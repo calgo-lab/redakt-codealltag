@@ -1,0 +1,10 @@
+services:
+  dev:
+    image: sksdotsauravs/python-nlp-dev-container:ubuntu24.04-python3.12.11-cuda12.8.1-torch2.7.1
+    env_file: .env
+    ports:
+      - 8787:8888
+    environment:
+      - ENABLE_JUPYTER=yes
+      - JUPYTER_PASS=ssaha
+      - KEEP_CONTAINER=yes

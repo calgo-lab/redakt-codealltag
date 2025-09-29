@@ -1,0 +1,70 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gelectra-large-sft-ner-codealltag
+  namespace: ssaha
+spec:
+  ttlSecondsAfterFinished: 60
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: gelectra-large-sft-ner-codealltag
+    spec:
+      containers:
+        - name: gelectra-large-sft-ner-codealltag-container
+          image: sksdotsauravs/python-nlp-dev-container:ubuntu24.04-python3.12.11-cuda12.8.1-torch2.7.1
+          workingDir: /home/ssaha
+          resources:
+            requests:
+              nvidia.com/gpu: "4"
+              memory: "32Gi"
+              cpu: "16000m"
+            limits:
+              nvidia.com/gpu: "4"
+              memory: "64Gi"
+              cpu: "32000m"
+          volumeMounts:
+            - name: ssaha-pv
+              mountPath: /home/ssaha
+          env:
+            - name: RUN_PYTHON_SCRIPT
+              value: "yes"
+            - name: PYTHON_SCRIPT_PATH
+              value: "/home/ssaha/Projects/redakt-codealltag/src/training_scripts/ner/fine_tune_sequence_tagger_with_transformer_model.py"
+            - name: FLAIR_CACHE_ROOT
+              value: /home/ssaha/.flair
+            - name: HF_HOME
+              value: /home/ssaha/.cache/huggingface
+            - name: MODEL_CHECKPOINTS_ROOT_DIR
+              value: /home/ssaha/model-checkpoints
+            - name: DATA_DIR
+              value: /home/ssaha/data/codealltag
+            - name: DATA_FOLD_K_VALUE
+              value: "1"
+            - name: USE_MULTI_GPU
+              value: "1"
+            - name: LOG_TO_WANDB
+              value: "0"
+            - name: TRANSFORMER_MODEL_NAME
+              value: deepset/gelectra-large
+            - name: USE_CONTEXT
+              value: "1"
+            - name: LEARNING_RATE
+              value: "5e-5"
+            - name: MAX_EPOCHS
+              value: "35"
+            - name: MINI_BATCH_SIZE
+              value: "1"
+            - name: WANDB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: wandb-secret-sksdotsauravs
+                  key: wandb_api_key
+      restartPolicy: Never
+      volumes:
+        - name: ssaha-pv
+          persistentVolumeClaim:
+            claimName: ssaha-pvc
+      nodeSelector:
+        gpu: a100
