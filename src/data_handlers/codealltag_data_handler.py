@@ -52,7 +52,7 @@ class CodealltagDataHandler:
         self._whitespace_regex: str = r"\s+"
         self._annotation_dataframe_columns: List[str] = ['file_path', 'Token_ID', 'Label', 'Start', 'End', 'Token']
         self._email_files_info_dataframe_file_path: Path = self.data_dir / f"email_files_info_{self.version}.parquet"
-        self._email_files_info_dataframe_columns: List[str] = ['ID', 'file_path_json', 'token_count', 'entity_count', 'label_wise_entity_count']
+        self._email_files_info_dataframe_columns: List[str] = ['ID', 'file_path_json', 'token_count', 'entity_count', 'label_wise_entity_count', 'file_size']
         self._somajo_tokenizer: SoMaJo = None
         self._sample_dataframe_dir = self.data_dir / "sample"
         self._sample_dataframe_file_path_prefix: str = f"sample_dataframe_{self.version}"
@@ -66,14 +66,17 @@ class CodealltagDataHandler:
         """
         if not self._email_files_info_dataframe_file_path.exists() or force_create:
             list(self._create_email_files_info_dataframe())
-        return pd.read_parquet(self._email_files_info_dataframe_file_path, engine="pyarrow")
+        
+        df = pd.read_parquet(self._email_files_info_dataframe_file_path, engine="pyarrow")
+        df = df.set_index("ID")
+        return df
 
-    def _create_email_files_info_dataframe(self) -> Generator[Tuple[str, int, int, str], None, None]:
+    def _create_email_files_info_dataframe(self) -> Generator[Tuple[str, int, int, str, int], None, None]:
         """
         Create the email files info dataframe and save it as a Parquet file.
-        Yields tuples containing (file_path_json, token_count, entity_count, label_wise_entity_count).
+        Yields tuples containing (file_path_json, token_count, entity_count, label_wise_entity_count, file_size).
         """
-        email_files_info_tuples: List[Tuple[str, int, int, str]] = list()
+        email_files_info_tuples: List[Tuple[str, int, int, str, int]] = list()
         email_files = list(self._xl_dir_path.glob("**/*" + self._email_file_ext))
 
         with tqdm(total=len(email_files), smoothing=0) as progress_bar:
@@ -102,7 +105,7 @@ class CodealltagDataHandler:
             compression="snappy"
         )
 
-    def _get_email_files_info_tuple_for_email_file(self, file_path: Path) -> Tuple[str, int, int, str]:
+    def _get_email_files_info_tuple_for_email_file(self, file_path: Path) -> Tuple[str, int, int, str, int]:
         """
         Get the email files info tuple for a given email file.
         :param file_path: Path to the email file.
@@ -110,7 +113,7 @@ class CodealltagDataHandler:
         """
         relative_file_path: Path = file_path.relative_to(self._xl_dir_path)
         relative_file_path_json: str = json.dumps(list(relative_file_path.parts))
-        email_text: str = self.read_email(relative_file_path)[1]
+        file_path, email_text = self.read_email(relative_file_path)
         annotation_df: DataFrame = self.read_annotations_as_dataframe(relative_file_path)
         token_count: int = len(self.tokenize_with_somajo_and_annotation_dataframe(email_text, annotation_df))
         entity_count: int = len(annotation_df) if not annotation_df.empty else 0
@@ -118,12 +121,14 @@ class CodealltagDataHandler:
         if not annotation_df.empty:
             label_wise_entity_count = annotation_df['Label'].value_counts().to_dict()
             label_wise_entity_count = dict(sorted(label_wise_entity_count.items()))
-
+        file_size = file_path.stat().st_size
+        
         return (
             relative_file_path_json, 
             token_count, 
             entity_count, 
-            json.dumps(label_wise_entity_count, ensure_ascii=False)
+            json.dumps(label_wise_entity_count, ensure_ascii=False),
+            file_size
         )
     
     @staticmethod
@@ -328,17 +333,21 @@ class CodealltagDataHandler:
     
     def _create_sample_dataframe(self, 
                                  sample_size: int = 175_000, 
-                                 random_state: int = 2025) -> None:
+                                 random_state: int = 2025, 
+                                 max_file_size: int = 1024) -> None:
         """
         Create a sample dataframe of email files ensuring balanced representation across categories.
         :param sample_size: The maximum number of files to include in the sample.
         :param random_state: Random state for reproducibility.
+        :param max_file_size: Maximum file size (in bytes) to include in the sample.
         :return: None
         """
         email_files_info_df = self.get_email_files_info_dataframe()
         email_files_info_df = email_files_info_df.reset_index()
 
+        email_files_info_df = email_files_info_df[email_files_info_df["file_size"] <= max_file_size]
         email_files_info_df = email_files_info_df[email_files_info_df["entity_count"] > 0]
+        
         email_files_info_df["file_path"] = email_files_info_df["file_path_json"].apply(
             lambda s: str(Path(*json.loads(s)))
         )
@@ -368,7 +377,8 @@ class CodealltagDataHandler:
             "category", 
             "token_count", 
             "entity_count", 
-            "label_wise_entity_count"
+            "label_wise_entity_count", 
+            "file_size"
         ]]
 
         labeled_tokens_list: List[str] = list()
@@ -391,34 +401,46 @@ class CodealltagDataHandler:
 
     def get_sample_dataframe(self, 
                              sample_size: int = 175_000, 
-                             random_state: int = 2025) -> DataFrame:
+                             random_state: int = 2025, 
+                             max_file_size: int = 1024) -> DataFrame:
         
         """
         Get a sample dataframe of email files ensuring balanced representation across categories.
         If the sample dataframe does not exist, it will be created.
         :param sample_size: The maximum number of files to include in the sample.
         :param random_state: Random state for reproducibility.
+        :param max_file_size: Maximum file size (in bytes) to include in the sample.
         :return: Sample DataFrame with email files info.
         """
         sample_df_file_path = self._sample_dataframe_dir / f"{self._sample_dataframe_file_path_prefix}_{sample_size}.parquet"
         if not sample_df_file_path.exists():
-            self._create_sample_dataframe(sample_size=sample_size, random_state=random_state)
+            self._create_sample_dataframe(
+                sample_size=sample_size, 
+                random_state=random_state, 
+                max_file_size=max_file_size
+            )
         return pd.read_parquet(sample_df_file_path, engine="pyarrow")
 
     def get_train_dev_test_datasetdict(self, 
                                        sample_size: int = 175_000, 
                                        random_state: int = 2025, 
+                                       max_file_size: int = 1024, 
                                        k: int = 1) -> DatasetDict:
         
         """
         Retrieve the train, dev, and test dataframes for the specified fold.
         :param sample_size: The maximum number of files to include.
         :param random_state: Random state for reproducibility.
+        :param max_file_size: Maximum file size (in bytes) to include.
         :param k: The fold number to retrieve (1-based index).
         :return: A DatasetDict containing the train, dev, and test datasets.
         """
-        
-        sample_df = self.get_sample_dataframe(sample_size=sample_size, random_state=random_state)
+
+        sample_df = self.get_sample_dataframe(
+            sample_size=sample_size, 
+            random_state=random_state, 
+            max_file_size=max_file_size
+        )
         sample_df.reset_index(drop=True, inplace=True)
 
         fold_tuples = list()

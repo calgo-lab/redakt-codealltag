@@ -60,6 +60,9 @@ if __name__ == "__main__":
     for fold in range(1, 6):
         fold_datasetdict = data_handler.get_train_dev_test_datasetdict(k=fold)
         fold_stats[fold] = data_handler.get_fold_stats(fold_datasetdict, label_order)
+        fold_stats[fold].pop("train_files", None)
+        fold_stats[fold].pop("dev_files", None)
+        fold_stats[fold].pop("test_files", None)
     print(json.dumps(fold_stats, indent=4, ensure_ascii=False))
 
     printable_fold_stats = dict()
