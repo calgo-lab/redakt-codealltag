@@ -182,7 +182,11 @@ def fine_tune():
     tagger.label_dictionary.add_unk = True
 
     if use_multi_gpu:
-        trainer = MultiGpuFlairModelTrainer(tagger, corpus, find_unused_parameters=False)
+        trainer = MultiGpuFlairModelTrainer(
+            tagger, 
+            corpus, 
+            find_unused_parameters=False if not transformer_model_name.startswith("xlm-roberta") else True
+        )
     else:
         trainer = ModelTrainer(tagger, corpus)
     
