@@ -42,6 +42,9 @@ def fine_tune():
     log_to_wandb = int(log_to_wandb) if log_to_wandb else 0
     log_to_wandb = bool(log_to_wandb) if log_to_wandb else False
 
+    if log_to_wandb:
+        wandb_entity = os.environ.get("WANDB_ENTITY", "sksdotsauravs-dev")
+
     transformer_model_name = os.environ.get("TRANSFORMER_MODEL_NAME", "google-bert/bert-base-german-cased")
     
     use_context = os.environ.get("USE_CONTEXT", None)
@@ -76,6 +79,8 @@ def fine_tune():
     print(f"data_fold_k_value: {data_fold_k_value}")
     print(f"use_multi_gpu: {use_multi_gpu}")
     print(f"log_to_wandb: {log_to_wandb}")
+    if log_to_wandb:
+        print(f"wandb_entity: {wandb_entity}")
     print(f"transformer_model_name: {transformer_model_name}")
     print(f"use_context: {use_context}")
     print(f"learning_rate: {learning_rate:.0e}".replace('e-0', 'e-'))
@@ -189,31 +194,34 @@ def fine_tune():
         )
     else:
         trainer = ModelTrainer(tagger, corpus)
-    
-    wandb_plugin = WandbLoggerPlugin(
-        project = project_root.name,
-        config = {
-            "transformer_model_name": transformer_model_name, 
-            "data_fold": data_fold_k_value, 
-            "learning_rate": learning_rate, 
-            "max_epochs": max_epochs, 
-            "mini_batch_size": mini_batch_size, 
-            "use_context": use_context, 
-            "sample_size": sample_size, 
-            "fold_stats": fold_stats
-        },
-        tracked = {
-            "train/loss", 
-            "dev/loss", 
-            "dev/micro avg/precision", 
-            "dev/micro avg/recall", 
-            "dev/micro avg/f1-score", 
-            "dev/macro avg/precision", 
-            "dev/macro avg/recall", 
-            "dev/macro avg/f1-score", 
-            "dev/accuracy"
-        }
-    )
+
+    wandb_plugin: WandbLoggerPlugin = None
+    if log_to_wandb:
+        wandb_plugin = WandbLoggerPlugin(
+            entity = wandb_entity, 
+            project = project_root.name, 
+            config = {
+                "transformer_model_name": transformer_model_name, 
+                "data_fold": data_fold_k_value, 
+                "learning_rate": learning_rate, 
+                "max_epochs": max_epochs, 
+                "mini_batch_size": mini_batch_size, 
+                "use_context": use_context, 
+                "sample_size": sample_size, 
+                "fold_stats": fold_stats
+            }, 
+            tracked = {
+                "train/loss", 
+                "dev/loss", 
+                "dev/micro avg/precision", 
+                "dev/micro avg/recall", 
+                "dev/micro avg/f1-score", 
+                "dev/macro avg/precision", 
+                "dev/macro avg/recall", 
+                "dev/macro avg/f1-score", 
+                "dev/accuracy"
+            }
+        )
 
     random.seed(2025)
     np.random.seed(2025)

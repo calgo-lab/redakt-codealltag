@@ -9,6 +9,7 @@ class WandbLoggerPlugin(TrainerPlugin):
     A TrainerPlugin that logs training metrics to Weights & Biases (wandb).
     """
     def __init__(self, 
+                 entity: str, 
                  project: str, 
                  config: Dict[str, Any] = None, 
                  tracked: Set[str] = None, 
@@ -16,12 +17,14 @@ class WandbLoggerPlugin(TrainerPlugin):
         
         """
         Initializes the WandbLoggerPlugin.
+        :param entity: The wandb entity (user or team) to log to.
         :param project: The name of the wandb project.
         :param config: Optional configuration dictionary to log to wandb.
         :param tracked: Optional set of metric names to track.
         :param reinit: Strategy for reinitializing wandb runs.
         """
         
+        self.entity = entity
         self.project = project
         self.config = dict(config) if config is not None else dict()
         self.tracked = set(tracked) if tracked is not None else None
@@ -35,7 +38,12 @@ class WandbLoggerPlugin(TrainerPlugin):
         """
         Initializes the wandb run after the trainer setup.
         """
-        self._run = wandb.init(project=self.project, config=self.config, reinit=self.reinit)
+        self._run = wandb.init(
+            entity=self.entity, 
+            project=self.project, 
+            config=self.config, 
+            reinit=self.reinit
+        )
 
     @BasePlugin.hook("metric_recorded")
     def metric_recorded(self, metric: MetricRecord):

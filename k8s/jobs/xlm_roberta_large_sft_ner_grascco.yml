@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: gelectra-large-sft-ner-codealltag
+  name: xlm-roberta-large-sft-ner-codealltag
   namespace: ssaha
 spec:
   ttlSecondsAfterFinished: 60
@@ -9,10 +9,10 @@ spec:
   template:
     metadata:
       labels:
-        app: gelectra-large-sft-ner-codealltag
+        app: xlm-roberta-large-sft-ner-codealltag
     spec:
       containers:
-        - name: gelectra-large-sft-ner-codealltag-container
+        - name: xlm-roberta-large-sft-ner-codealltag-container
           image: sksdotsauravs/python-nlp-dev-container:ubuntu24.04-python3.12.11-cuda12.8.1-torch2.7.1
           workingDir: /home/ssaha
           resources:
@@ -49,7 +49,7 @@ spec:
             - name: WANDB_ENTITY
               value: sksdotsauravs-dev
             - name: TRANSFORMER_MODEL_NAME
-              value: deepset/gelectra-large
+              value: xlm-roberta-large
             - name: USE_CONTEXT
               value: "1"
             - name: LEARNING_RATE

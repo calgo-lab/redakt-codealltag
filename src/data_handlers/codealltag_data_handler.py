@@ -572,3 +572,9 @@ class CodealltagDataHandler:
         for item in input_df[column_name]:
             total.update(json.loads(item))
         return total
+    
+    def get_annotation_dataframe(self):
+        return pd.read_parquet(
+            self.data_dir / f"annotation_files_info_{self.version}.parquet", 
+            engine="pyarrow"
+        )
