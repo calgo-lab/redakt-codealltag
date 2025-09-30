@@ -21,6 +21,7 @@ import torch
 import warnings
 
 warnings.filterwarnings("ignore", message=r".*torch\.cuda\.amp\.GradScaler.*")
+warnings.filterwarnings("ignore", message=r"No device id is provided via `init_process_group`.*")
 
 def fine_tune():
 
@@ -200,21 +201,13 @@ def fine_tune():
         tracked = {
             "train/loss", 
             "dev/loss", 
-            "test/loss", 
             "dev/micro avg/precision", 
             "dev/micro avg/recall", 
             "dev/micro avg/f1-score", 
             "dev/macro avg/precision", 
             "dev/macro avg/recall", 
             "dev/macro avg/f1-score", 
-            "dev/accuracy", 
-            "test/micro avg/precision", 
-            "test/micro avg/recall", 
-            "test/micro avg/f1-score", 
-            "test/macro avg/precision", 
-            "test/macro avg/recall", 
-            "test/macro avg/f1-score", 
-            "test/accuracy"
+            "dev/accuracy"
         }
     )
 
@@ -231,7 +224,6 @@ def fine_tune():
         mini_batch_size = mini_batch_size, 
         eval_batch_size = mini_batch_size, 
         write_weights = True, 
-        monitor_test = True, 
         save_final_model = False, 
         use_final_model_for_eval = False, 
         shuffle=False, 
