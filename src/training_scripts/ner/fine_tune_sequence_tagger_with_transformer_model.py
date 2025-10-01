@@ -186,11 +186,16 @@ def fine_tune():
     )
     tagger.label_dictionary.add_unk = True
 
+    models_with_unused_parameters = [
+        "google-bert/bert-base-german-cased", 
+        "xlm-roberta-large"
+    ]
+
     if use_multi_gpu:
         trainer = MultiGpuFlairModelTrainer(
             tagger, 
             corpus, 
-            find_unused_parameters=False if not transformer_model_name.startswith("xlm-roberta") else True
+            find_unused_parameters=False if transformer_model_name not in models_with_unused_parameters else True
         )
     else:
         trainer = ModelTrainer(tagger, corpus)
